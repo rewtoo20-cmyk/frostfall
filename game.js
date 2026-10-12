@@ -48,7 +48,7 @@
   const MENU_C = [['bld', 'house', 'Постройки'], ['heroes', 'helm', 'Герои'], ['exp', 'map', 'Вылазки'], ['tavern', 'mug', 'Таверна'], ['arts', 'blade', 'Мечи'], ['quests', 'scroll', 'Задания'], ['shop', 'shop', 'Лавка']];
   const CORNER = [['ach', 'trophy', 'Награды'], ['prest', 'snow', 'Перерождение'], ['set', 'gear', 'Настройки']];
   const SUB = { hero: 'Сила клика, крит и золото', allies: 'Союзники бьют сами, пока ты занят', items: 'Надевай лучшее, лишнее продавай', arts: 'Зачарованные мечи: бонусы и особые удары', skills: 'Сильные умения с откатом', quests: 'Поручения жителей столицы', shop: 'Постоянные улучшения за самоцветы', prest: 'Начать заново, но сильнее', ach: 'Награды за достижения', set: 'Сохранение и режимы', bld: 'Строй и улучшай столицу', heroes: 'Твои герои и отряд', tavern: 'Призыв героев за золото и самоцветы', exp: 'Герои приносят добычу за время' };
-  function chip(x, y, icon, val, col, tip) { const w = Math.max(52, tw(val) + 20); const hv = hit(x, y, w, 13, null); panel(c, x, y, w, 13); c.drawImage(A.icons[icon], x + 4, y + 3); text(c, val, x + 15, y + 1, col); if (hv && tip) tipAt(x + w + 4, y, tip); }
+  function chip(x, y, icon, val, col, tip) { const w = Math.max(52, tw(val) + 20); const hv = hit(x, y, w, 13, null); panel(c, x, y, w, 13); c.drawImage(A.icons[icon], x + 4, y + 3); text(c, val, x + 15, y + 1, col); if (hv && tip) tipAt(x + w + 4, y, tip); return w; }
   function tipAt(x, y, lab) { const w = tw(lab) + 8, tx = Math.max(2, Math.min(WD - w - 2, x)); panel(c, tx, y, w, 13, { fill: '#0c1224', hi: '#5bc0ff' }); text(c, lab, tx + 4, y + 1, '#fff'); }
   function dock() {
     const M = mode === 'city' ? MENU_C : MENU, ws = M.map((m) => Math.max(38, tw(m[2]) + 10)), gap = 3, tot = ws.reduce((a, b) => a + b, 0) + gap * (M.length - 1), by = 189;
@@ -60,8 +60,8 @@
       if (m[0] === 'arts' && Lr && !Lr.owned(S).length) { /* пока нет мечей */ }
       x += w + gap; });
   }
-  function corner() {
-    CORNER.forEach((m, i) => { const x = WD - 88 - 3 + (i - 3) * 16 + 2, y = 4, hv = button(x, y, 14, 14, null, { on: tab === m[0], fn: () => { tab = tab === m[0] ? null : m[0]; scroll[tab] = 0; } }); c.drawImage(A.icons[m[1]], x + 3, y + 3); if (hv) tipAt(x - tw(m[2]) / 2 - 4, y + 16, m[2]); });
+  function corner(x0, y) {
+    CORNER.forEach((m, i) => { const x = x0 + i * 16, hv = button(x, y, 14, 14, null, { on: tab === m[0], fn: () => { tab = tab === m[0] ? null : m[0]; scroll[tab] = 0; } }); c.drawImage(A.icons[m[1]], x + 3, y + 3); if (hv) tipAt(x - tw(m[2]) / 2 - 4, y + 16, m[2]); });
   }
   function tracker(x, y) {
     if (!Lr) return; const hn = Lr.nextHint(S); const w = 124; if (!hn) return;
@@ -74,8 +74,9 @@
   }
   const mm = (v) => String(v).replace('.', ',');
   function hud(info) {
+    if (mode === 'city') { cityHud(); dock(); return; }
     const gps = 0; chip(4, 4, 'coin', F(S.gold), COL.gold, 'Золото'); chip(4, 18, 'gem', String(S.gems), COL.gem, 'Самоцветы'); chip(4, 32, 'snow', String(S.shards), '#9fe8ff', 'Осколки льда');
-    corner();
+    corner(247, 4);
     if (mode === 'battle') {
       const zt = info.zoneName, zw = Math.max(110, tw(zt) + 20); panel(c, WD / 2 - zw / 2 - 18, 3, zw, 14); text(c, zt, WD / 2 - 18, 4, '#eaf5ff', { align: 'c' });
       text(c, 'Этап ' + (S.n + 1) + (S.rt.farm ? ' (фарм)' : ''), WD / 2 - 18, 19, COL.mut, { align: 'c' });
@@ -97,8 +98,8 @@
         if (ok && cd > 0) { c.fillStyle = 'rgba(8,12,28,.6)'; const hh = Math.round(23 * cd / k.cd); c.fillRect(x + 1, y + 1, 23, hh); text(c, Math.ceil(cd) + '', x + 12, y + 8, '#fff', { align: 'c' }); }
         if (!ok) text(c, k.lvl + ' ур', x + 12, y + 8, '#7a86a6', { align: 'c' }); else text(c, String(i + 1), x + 12, y + 14, act ? '#ffd24a' : COL.mut, { align: 'c', sh: null });
         if (hv) { const lab = k.name + ' · ' + k.cd + ' с', w = tw(lab) + 8; panel(c, x - w - 3, y + 6, w, 13); text(c, lab, x - w + 1, y + 7, '#fff'); } });
-    } else cityHud();
-    switchBtn();
+    }
+    switchBtn(4, 48, 90, 16);
     dock();
   }
 
@@ -116,21 +117,29 @@
     let cx = x; const items = [['coin', cost.gold, S.gold, COL.gold]]; for (const k of ['wood', 'stone', 'iron']) if (cost[k]) items.push([k, cost[k], S.city.res[k], Wd.RES[k].col]);
     for (const it of items) { c.drawImage(A.icons[it[0]], cx, y + 2); const t = F(it[1]); text(c, t, cx + 10, y, it[2] >= it[1] ? '#e6f1ff' : COL.bad); cx += 14 + tw(t) + 4; }
   }
-  function switchBtn() {
-    const city = mode === 'city'; button(4, 48, 90, 16, city ? 'В поход' : 'Столица', { icon: A.icons[city ? 'sword' : 'house'], green: true, dy: -1, fn: () => { mode = city ? 'battle' : 'city'; tab = null; bldDlg = null; } });
+  function switchBtn(x, y, w, h) {
+    const city = mode === 'city'; button(x, y, w, h, city ? 'В поход' : 'Столица', { icon: A.icons[city ? 'sword' : 'house'], green: true, dy: -1, fn: () => { mode = city ? 'battle' : 'city'; tab = null; bldDlg = null; } });
   }
   function chipR(y, icon, val, col, rate) { const t = val, w = Math.max(60, tw(t) + 20 + (rate ? tw(rate) + 4 : 0)); panel(c, WD - w - 4, y, w, 13); c.drawImage(A.icons[icon], WD - w, y + 3); text(c, t, WD - w + 11, y + 1, col); if (rate) text(c, rate, WD - 8, y + 1, COL.mut, { align: 'r' }); }
+  function trackerLine(x, y, w) {
+    if (!Lr) return; const hn = Lr.nextHint(S); if (!hn) return; const q = hn.q, nm = Lr.NID[q.npc].name; let t, col = '#fff', hi = '#3a4f80';
+    if (hn.offer) { t = 'Новое задание: поговори с ' + nm; col = '#ffd24a'; hi = '#ffd24a'; }
+    else if (hn.ready) { t = q.title + ': сдай ' + nm; col = '#5fe08a'; hi = '#5fe08a'; }
+    else { const rq = Lr.reqs(S, q).find((r) => !r.ok); t = q.title + (rq ? ': ' + rq.t.replace('Дойти до этапа ', 'этап ') + ' ' + rq.cur + '/' + rq.max : ''); }
+    const hv = hit(x, y, w, 13, () => { tab = 'quests'; scroll.quests = 0; }); panel(c, x, y, w, 13, { fill: hv ? '#1d2a4a' : COL.bg2, hi }); c.drawImage(A.icons.scroll, x + 3, y + 2); text(c, fit(t, w - 16), x + 14, y + 1, col);
+  }
   function cityHud() {
     const m = Wd.mods(S), cr = S.city.res;
-    chipR(22, 'wood', F(cr.wood), Wd.RES.wood.col, m.wood ? '+' + fx1(m.wood) + '/с' : ''); chipR(36, 'stone', F(cr.stone), Wd.RES.stone.col, m.stone ? '+' + fx1(m.stone) + '/с' : ''); chipR(50, 'iron', F(cr.iron), Wd.RES.iron.col, m.iron ? '+' + fx1(m.iron) + '/с' : '');
-    const zt = 'Столица Фростхольм', zw = tw(zt) + 24; panel(c, WD / 2 - 18 - zw / 2, 3, zw, 14); text(c, zt, WD / 2 - 18, 4, '#eaf5ff', { align: 'c' });
-    panel(c, 4, 68, 98, 38, { fill: COL.bg2 });
-    c.drawImage(A.icons.house, 8, 71); text(c, 'Ратуша', 19, 70, COL.mut); text(c, Wd.lvl(S, 'hall') + ' ур.', 98, 70, '#fff', { align: 'r' });
-    c.drawImage(A.icons.helm, 8, 82); text(c, 'Отряд', 19, 81, COL.mut); text(c, S.city.squad.length + '/' + Wd.squadSlots(S), 98, 81, '#fff', { align: 'r' });
-    c.drawImage(A.icons.map, 8, 93); text(c, 'Вылазки', 19, 92, COL.mut); text(c, S.city.exp.length + '/' + Wd.expSlots(S), 98, 92, '#fff', { align: 'r' });
-    tracker(WD - 128, 68);
-    const done = S.city.exp.filter((x) => Wd.expLeft(x) <= 0).length; if (done) { panel(c, WD / 2 - 18 - 50, 20, 100, 14, { fill: '#2f8f5f' }); text(c, 'Вылазка завершена!', WD / 2 - 18, 21, '#fff', { align: 'c', sh: null }); }
-    if (hoverSpot && Wd.BID[hoverSpot]) { const b = Wd.BID[hoverSpot], L = Wd.lvl(S, hoverSpot), t = b.name + (L ? ' · ур. ' + L : ' · не построено'), w = tw(t) + 10; panel(c, WD / 2 - 18 - w / 2, 38, w, 14); text(c, t, WD / 2 - 18, 39, '#fff', { align: 'c' }); }
+    // ряд 1: слева деньги, справа материалы (цифры; скорость показывается при наведении)
+    let x = 4; x += chip(x, 3, 'coin', F(S.gold), COL.gold, 'Золото') + 3; x += chip(x, 3, 'gem', String(S.gems), COL.gem, 'Самоцветы') + 3; chip(x, 3, 'snow', String(S.shards), '#9fe8ff', 'Осколки льда');
+    const R = [['wood', 'Дерево'], ['stone', 'Камень'], ['iron', 'Железо']].map(([k, nm]) => ({ k, nm, v: F(cr[k]), rate: m[k] }));
+    let rx = WD - 4; for (let i = R.length - 1; i >= 0; i--) { const r = R[i], w = Math.max(50, tw(r.v) + 20); rx -= w; const hv = hit(rx, 3, w, 13, null); panel(c, rx, 3, w, 13); c.drawImage(A.icons[r.k], rx + 4, 6); text(c, r.v, rx + 15, 4, Wd.RES[r.k].col); if (hv) tipAt(rx - 30, 18, r.nm + (r.rate ? ' +' + fx1(r.rate) + '/с' : ' (нет добычи)')); rx -= 3; }
+    // ряд 2: кнопка похода, значки, задание
+    switchBtn(4, 19, 84, 13); corner(92, 18); trackerLine(146, 19, WD - 150);
+    // ряд 3: сводка по столице
+    const info = 'Ратуша ' + Wd.lvl(S, 'hall') + ' · отряд ' + S.city.squad.length + '/' + Wd.squadSlots(S) + ' · вылазки ' + S.city.exp.length + '/' + Wd.expSlots(S); panel(c, 4, 35, tw(info) + 10, 13); text(c, info, 9, 36, COL.mut);
+    const done = S.city.exp.filter((q) => Wd.expLeft(q) <= 0).length; if (done) { const t = 'Вылазка завершена! Забери награду', w = tw(t) + 12; panel(c, WD - w - 4, 35, w, 13, { fill: '#2f8f5f' }); text(c, t, WD - w + 2, 36, '#fff', { sh: null }); }
+    else if (hoverSpot && Wd.BID[hoverSpot]) { const b = Wd.BID[hoverSpot], L = Wd.lvl(S, hoverSpot), t = b.name + (L ? ' · ур. ' + L : ' · не построено'), w = tw(t) + 10; panel(c, WD - w - 4, 35, w, 13, { hi: '#5bc0ff' }); text(c, t, WD - w + 1, 36, '#fff'); }
   }
   function bldDialog() {
     if (!bldDlg) return; const id = bldDlg, i = Wd.bldInfo(S, id), b = i.b, w = 250, h = 124, x = (WD - w) / 2, y = 34;
@@ -413,7 +422,7 @@
     C.tick(S, dt);
     const ev = S.rt.ev.slice(); events(ev); ev.forEach((e) => Sc.fx(e, S)); S.rt.ev.length = 0;
     hits = []; hitsOff = !!(dialog || talk);
-    if (mode === 'city') { spots = City.frame(c, S, dt, hoverSpot); if (!tab && !dialog && !bldDlg && !talk) { let hv = null; for (let k = spots.length - 1; k >= 0; k--) { const sp = spots[k]; if (hit(sp.x, sp.y, sp.w, sp.h, () => { if (sp.npc) openTalk(sp.npc); else bldDlg = sp.id; })) { hv = sp.id; break; } } hoverSpot = hv; } else hoverSpot = null; } else Sc.frame(c, S, dt);
+    if (mode === 'city') { spots = City.frame(c, S, dt, hoverSpot); if (!tab && !dialog && !bldDlg && !talk) { let hv = null; for (const sp of spots) if (hit(sp.x, sp.y, sp.w, sp.h, () => { if (sp.npc) openTalk(sp.npc); else bldDlg = sp.id; })) hv = sp.id; hoverSpot = hv; } else hoverSpot = null; } else Sc.frame(c, S, dt);
     const info = C.stageInfo(S.n); hud(info);
     drawToasts(dt);
     if (tab) modalView();
@@ -434,6 +443,6 @@
     addEventListener('beforeunload', persist); document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
     last = performance.now(); requestAnimationFrame(loop);
   }
-  window.__FF = { get S() { return S; }, C, talk: (id) => openTalk(id), get tk() { return talk; }, open: (t) => { tab = t; }, mode: (m) => { mode = m; tab = null; }, bld: (id) => { bldDlg = id; } };
+  window.__FF = { get S() { return S; }, C, talk: (id) => openTalk(id), get tk() { return talk; }, open: (t) => { tab = t; }, mode: (m) => { mode = m; tab = null; }, bld: (id) => { bldDlg = id; }, bldId: () => bldDlg };
   start();
 })();
