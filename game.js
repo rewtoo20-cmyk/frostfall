@@ -405,10 +405,26 @@
   cv.addEventListener('pointermove', (e) => { mouse = pos(e); if (EUI.open) EUI.pointerMove(mouse); });
   cv.addEventListener('pointerleave', () => { mouse = { x: -1, y: -1 }; });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
-  cv.addEventListener('pointerdown', (e) => {
+  function press(e) {
     e.preventDefault(); mouse = pos(e); if (credits) { credits = null; return; } if (EUI.open && !dialog && EUI.pointerDown(mouse, e)) return; for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (mouse.x >= h.x && mouse.x < h.x + h.w && mouse.y >= h.y && mouse.y < h.y + h.h) { if (h.fn) { FFm.uiSound(h.can); h.fn(); if (h.rep) { clearTimeout(hold); hold = setTimeout(function t() { h.fn(); hold = setTimeout(t, 90); }, 420); } } return; } }
     if (mode === 'battle' && !talk && !dialog) { if (window.Core.Events && window.Core.Events.click(S, mouse.x, mouse.y)) return; C.hit(S); FFm.onClick(); }
+  }
+  // Касания: короткое касание = клик (по отпусканию), движение пальцем = прокрутка списка / панорама редактора
+  let tp = null;
+  cv.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return press(e);
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+    mouse = pos(e); const wa = wheelArea && mouse.x >= wheelArea.x && mouse.x < wheelArea.x + wheelArea.w && mouse.y >= wheelArea.y && mouse.y < wheelArea.y + wheelArea.h && !EUI.open ? wheelArea : null;
+    if (EUI.open && !dialog) { press(e); tp = { ed: true }; return; }
+    tp = { e, x: mouse.x, y: mouse.y, wa, start: wa ? (scroll[wa.key] || 0) : 0, drag: false };
   });
+  cv.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'touch' || !tp || tp.ed) return; const p = pos(e);
+    if (!tp.drag && tp.wa && Math.abs(p.y - tp.y) > 3) { tp.drag = true; mouse = { x: -1, y: -1 }; }
+    if (tp.drag) scroll[tp.wa.key] = Math.max(0, Math.min(tp.wa.max, tp.start - (p.y - tp.y)));
+  });
+  const tEnd = (e) => { if (e.pointerType !== 'touch' || !tp) return; const t = tp; tp = null; if (t.ed || t.drag) return; if (e.type === 'pointerup') { mouse = { x: t.x, y: t.y }; press(t.e); } };
+  ['pointerup', 'pointercancel'].forEach((n) => cv.addEventListener(n, tEnd));
   ['pointerup', 'pointercancel'].forEach((n) => addEventListener(n, () => { if (EUI.open) EUI.pointerUp(); clearTimeout(hold); hold = null; }));
   cv.addEventListener('wheel', (e) => { e.preventDefault(); const p = pos(e); if (wheelArea && FF_audio_scroll()) { /* звук прокрутки */ } if (EUI.open && EUI.wheel(p, e.deltaY)) return; if (wheelArea && p.x >= wheelArea.x && p.x < wheelArea.x + wheelArea.w && p.y >= wheelArea.y && p.y < wheelArea.y + wheelArea.h) scroll[wheelArea.key] = Math.max(0, Math.min(wheelArea.max, (scroll[wheelArea.key] || 0) + Math.sign(e.deltaY) * 30)); }, { passive: false });
   addEventListener('keyup', (e) => { if (EUI.open && e.code === 'Space') EUI.key(e); });
