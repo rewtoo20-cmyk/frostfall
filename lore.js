@@ -25,6 +25,12 @@
       fx: { dmg: [30, 12], gold: [15, 6], crit: [4, 1] }, proc: { every: 10, m0: 8, ml: 1, name: 'Сердце зимы!', col: '#ffffff' } },
     { id: 'king', name: 'Меч Короля Мороза', rar: 3, shape: 'wide', pal: ['#ffd0d8', '#e0325a', '#9fe8ff'], src: 'Задание Тени из Храма', story: 'Им правил мёртвый король. Теперь он слушается тебя. Пока.',
       fx: { dmg: [45, 15], ally: [20, 8], click: [30, 10] }, proc: { p: 0.1, m0: 6, ml: 0.8, name: 'Воля короля!', col: '#ff4d6d' } },
+    { id: 'star', name: 'Звёздный Осколок', rar: 2, shape: 'zig', pal: ['#fff6c0', '#ffd24a', '#7fe0ff'], src: 'Золотая снежинка или задание Ингеборг', story: 'Упал со звёздопада. Тёплый на ощупь.',
+      fx: { dmg: [18, 8], gold: [10, 5] }, proc: { p: 0.07, m0: 4, ml: 0.6, name: 'Звёздный удар!', col: '#ffe14a' } },
+    { id: 'yeti', name: 'Клык Йети', rar: 2, shape: 'wide', pal: ['#f0fbff', '#9ad0f0', '#ffffff'], src: 'Элитные монстры или задание Эйнара', story: 'Вырван у древнего йети. Пахнет мокрой шерстью.',
+      fx: { dmg: [16, 7], click: [25, 10] }, proc: { every: 9, m0: 5, ml: 0.6, name: 'Рёв йети!', col: '#cfeaff' } },
+    { id: 'night', name: 'Ночной Шёпот', rar: 2, shape: 'str', pal: ['#c8b8ff', '#4a3a98', '#ff7ae0'], src: 'Награда за каждый 10-й контракт', story: 'Шепчет, пока ты спишь. Иногда даже по делу.',
+      fx: { crit: [4, 1.5], dmg: [12, 5], ally: [10, 5] }, proc: { p: 0.06, m0: 5, ml: 0.7, name: 'Тень!', col: '#c8b8ff' } },
   ];
   const AID = {}; ARTS.forEach((a) => { AID[a.id] = a; });
   const MAXL = 10;
@@ -51,8 +57,9 @@
   }
   function artEquip(s, id) { if (!lvOf(s, id)) return false; lore(s).eq = id; W.bump(s); return true; }
   function artUp(s, id) { const i = artInfo(s, id); if (!i.have || !i.can) return false; s.city.res.iron -= i.cost.iron; s.gems -= i.cost.gems; lore(s).art[id]++; W.bump(s); return true; }
-  function dropArt(s) { // редкая находка (босс / руины): сначала «Голод Бездны», потом усиление найденных мечей
-    if (!lvOf(s, 'void')) return giveArt(s, 'void');
+  function dropArt(s, kind) { // редкая находка: босс, элита, событие, контракт
+    const tgt = { event: 'star', elite: 'yeti', contract: 'night' }[kind] || 'void';
+    if (!lvOf(s, tgt)) return giveArt(s, tgt);
     const have = owned(s); return giveArt(s, have[Math.floor(Math.random() * have.length)].id);
   }
 
@@ -72,8 +79,12 @@
     if (p.every) { rt.lc = (rt.lc | 0) + 1; if (rt.lc >= p.every) { rt.lc = 0; go = true; } } else go = Math.random() < p.p;
     return go ? { m: procMult(a, L), name: p.name, col: p.col, id: a.id } : null;
   };
+  const affSum = (s, k) => { let v = 0; for (const slot in s.equip) { const it = s.equip[slot]; if (it && it.aff) for (const a of it.aff) if (a[0] === k) v += a[1]; } return v; };
+  const o2 = { dmg: H.dmg, gold: H.gold, crit: H.crit, click: H.click, ally: H.ally };
+  H.dmg = (s) => o2.dmg(s) * (1 + affSum(s, 'dmg') / 100); H.gold = (s) => o2.gold(s) * (1 + affSum(s, 'gold') / 100); H.crit = (s) => o2.crit(s) + affSum(s, 'crit') / 100;
+  H.click = (s) => o2.click(s) * (1 + affSum(s, 'click') / 100); H.ally = (s) => o2.ally(s) * (1 + affSum(s, 'ally') / 100);
   const prevKill = H.kill;
-  H.kill = (s, i) => { prevKill(s, i); if (i.boss && Math.random() < 0.05) dropArt(s); };
+  H.kill = (s, i) => { prevKill(s, i); if (i.boss && Math.random() < 0.05) dropArt(s, 'boss'); else if (i.elite && Math.random() < 0.02) dropArt(s, 'elite'); };
 
   // ---------- жители и задания ----------
   const NPCS = [
@@ -86,13 +97,13 @@
   ];
   const NID = {}; NPCS.forEach((n) => { NID[n.id] = n; });
   const bl = (id, v) => ({ k: 'bld', id, v });
-  const REQ = { stage: (v) => ({ k: 'stage', v }), boss: (v) => ({ k: 'boss', v }), kills: (v) => ({ k: 'kills', v }), heroes: (v) => ({ k: 'heroes', v }), art: (v) => ({ k: 'art', v }), bld: bl };
+  const REQ = { stage: (v) => ({ k: 'stage', v }), boss: (v) => ({ k: 'boss', v }), kills: (v) => ({ k: 'kills', v }), heroes: (v) => ({ k: 'heroes', v }), art: (v) => ({ k: 'art', v }), elite: (v) => ({ k: 'elite', v }), event: (v) => ({ k: 'event', v }), goblin: (v) => ({ k: 'goblin', v }), bld: bl };
   function reqCur(s, r) {
-    switch (r.k) { case 'bld': return W.lvl(s, r.id); case 'stage': return s.maxN + 1; case 'boss': return s.st.bosses | 0; case 'kills': return s.st.kills | 0; case 'heroes': return Object.keys(s.city.heroes).length; case 'art': return owned(s).length; }
+    switch (r.k) { case 'bld': return W.lvl(s, r.id); case 'stage': return s.maxN + 1; case 'boss': return s.st.bosses | 0; case 'kills': return s.st.kills | 0; case 'heroes': return Object.keys(s.city.heroes).length; case 'art': return owned(s).length; case 'elite': return s.st.elites | 0; case 'event': return s.st.events | 0; case 'goblin': return s.st.goblins | 0; }
     return 0;
   }
   function reqText(r) {
-    switch (r.k) { case 'bld': return W.BID[r.id].name + ' ' + r.v + ' ур.'; case 'stage': return 'Дойти до этапа ' + r.v; case 'boss': return 'Победить боссов: ' + r.v; case 'kills': return 'Победить монстров: ' + r.v; case 'heroes': return 'Героев в столице: ' + r.v; case 'art': return 'Зачарованных мечей: ' + r.v; }
+    switch (r.k) { case 'bld': return W.BID[r.id].name + ' ' + r.v + ' ур.'; case 'stage': return 'Дойти до этапа ' + r.v; case 'boss': return 'Победить боссов: ' + r.v; case 'kills': return 'Победить монстров: ' + r.v; case 'heroes': return 'Героев в столице: ' + r.v; case 'art': return 'Зачарованных мечей: ' + r.v; case 'elite': return 'Победить элитных: ' + r.v; case 'event': return 'Поймать событий: ' + r.v; case 'goblin': return 'Поймать гоблинов: ' + r.v; }
     return '';
   }
   const reqs = (s, q) => q.req.map((r) => { const cur = reqCur(s, r); return { t: reqText(r), cur: Math.min(cur, r.v), max: r.v, ok: cur >= r.v }; });
@@ -168,10 +179,38 @@
       o: 'Я служил королю, которого уже нет. Его меч ждёт достойного. Победи пятнадцать боссов и собери четыре меча, и он твой.',
       w: 'Пятнадцать боссов и четыре меча. Время для меня давно ничего не значит. Для тебя оно значит.',
       r: 'Четыре клинка и пятнадцать побед. Король признал бы тебя. Забирай его меч, мой долг выполнен. Наконец-то.' },
+    { id: 'g6', npc: 'gunnar', pre: 'g5', title: 'Конец вьюги', req: [REQ.stage(80), REQ.boss(40)], rw: { g: 5000, gems: 40, frag: { skadi: 20 } },
+      o: 'Вьюга идёт с самого дальнего края. Дойди до 80-го этапа, победи сорок боссов и положи ей конец. Скади, королева льда, уже точит коньки.',
+      w: 'Восьмидесятый этап и сорок боссов. Я верю, хотя считаю на пальцах уже в третий раз.',
+      r: 'Вьюга стихла! Город празднует, а я, как всегда, подписываю бумаги. Держи награду, и Скади тебя тоже ждёт.' },
+    { id: 'i4', npc: 'ing', pre: 'i3', title: 'Звёздная пыль', req: [REQ.event(5)], rw: { g: 800, gems: 8, art: 'star' },
+      o: 'Звёзды падают на нашу землю золотыми снежинками. Поймай пять событий в походе, и одна из них оставит тебе осколок.',
+      w: 'Пять событий. Золотая снежинка, гоблин, метель, караван. Лови их, милый, не зевай.',
+      r: 'Звёздный Осколок твой. Он теплее, чем кажется, и громче, чем звучит. Береги.' },
+    { id: 'b3', npc: 'bjorn', pre: 'b2', title: 'Сталь высшей пробы', req: [bl('forge', 8), REQ.art(5)], rw: { g: 2500, gems: 15, iron: 300 },
+      o: 'Теперь я хочу большую кузницу и пять мечей на моём верстаке. Тогда покажу тебе пару секретов. Один из них про то, как не ронять молот на ногу.',
+      w: 'Кузница на восьмом и пять мечей. Молот в этот раз я держу крепче.',
+      r: 'Вот это коллекция! Держи железо и самоцветы, а секрет такой: никогда не бей по горячему на спор.' },
+    { id: 'e3', npc: 'einar', pre: 'e2', title: 'Баллада о снежинке', req: [REQ.event(3)], rw: { g: 600, gems: 6 },
+      o: 'Я слышал, что в небе летают золотые снежинки! Поймай три события, и я сложу об этом балладу. Рифма «снег» и «побег» уже есть.',
+      w: 'Событий пока мало. Баллада получается только про одну снежинку, и та не рифмуется.',
+      r: 'Всё! Баллада готова: «Летит снежинка, звенит монета...» Дальше сам доделаю. Держи за вдохновение.' },
+    { id: 'e4', npc: 'einar', pre: 'e3', title: 'Хроника элиты', req: [REQ.elite(15)], rw: { g: 1500, gems: 10, art: 'yeti' },
+      o: 'Говорят, в походах встречаются элитные твари с золотым блеском. Победи пятнадцать, и я запишу тебя в хроники. А ещё у меня есть зуб... в смысле, Клык.',
+      w: 'Пятнадцать элитных. Они сильнее, но и награда у них жирнее, чем моя кружка.',
+      r: 'Хроника пополнена! А вот и Клык Йети. Не спрашивай, как он у меня оказался, лучше поблагодари.' },
+    { id: 'u2', npc: 'ulf', pre: 'u1', title: 'Гоблинский клад', req: [REQ.goblin(3)], rw: { g: 1500, gems: 8, iron: 100 },
+      o: 'Эти гоблины ходят по моим дорогам и таскают мои мешки! Поймай трёх, и я поделюсь тем, что они у меня украли. Ладно, у нас общая бухгалтерия.',
+      w: 'Гоблинов надо ловить тремя ударами. Они быстрые, как мои оправдания.',
+      r: 'Три гоблина! Клад возвращён, а я наконец перестану ночевать в амбаре. Держи свою долю.' },
+    { id: 't2', npc: 'shade', pre: 'tmp2', title: 'Последний страж', req: [REQ.boss(40), REQ.stage(70)], rw: { g: 4000, gems: 30, frag: { ragnar: 20 } },
+      o: 'Король давно не спрашивает. Остался один страж, и это я. Дойди до 70-го этапа, победи сорок боссов, и я смогу уйти.',
+      w: 'Сорок боссов и семидесятый этап. Я подожду, мне не привыкать.',
+      r: 'Спасибо. Теперь я свободен. Пусть Рагнар ждёт тебя у костра, а я... наконец... отдохну.' },
   ];
   const QID = {}; QS.forEach((q) => { QID[q.id] = q; });
   const qst = (s, id) => lore(s).q[id] | 0; // 0 нет, 1 принято, 2 сдано
-  const qAvail = (s, q) => !q.pre || (q.pre === 'tmp' ? W.lvl(s, 'temple') >= 1 : qst(s, q.pre) === 2);
+  const qAvail = (s, q) => !q.pre || (q.pre === 'tmp' ? W.lvl(s, 'temple') >= 1 : q.pre === 'tmp2' ? qst(s, 't1') === 2 : qst(s, q.pre) === 2);
   const qAllOk = (s, q) => reqs(s, q).every((r) => r.ok);
   function npcQuest(s, npcId) { return QS.find((q) => q.npc === npcId && qst(s, q.id) !== 2 && qAvail(s, q)) || null; }
   // состояние жителя: offer ! / ready ? / wait / idle
@@ -236,7 +275,7 @@
   }
 
   // ---------- сохранение ----------
-  const newLore = () => ({ art: {}, eq: null, q: {}, beer: 0 });
+  const newLore = () => ({ art: {}, eq: null, q: {}, beer: 0, ct: [] });
   const prevNew = H.newCity, prevLoad = H.loadCity;
   H.newCity = () => { const c = prevNew(); c.lore = newLore(); return c; };
   H.loadCity = (d) => {
@@ -244,18 +283,50 @@
     for (const a of ARTS) { const v = x.art && x.art[a.id]; if (Number.isFinite(v) && v >= 1) l.art[a.id] = Math.min(MAXL, v | 0); }
     if (typeof x.eq === 'string' && l.art[x.eq]) l.eq = x.eq; else { const b = ARTS.filter((a) => l.art[a.id]).sort((a, b2) => b2.rar - a.rar)[0]; l.eq = b ? b.id : null; }
     for (const q of QS) { const v = x.q && x.q[q.id]; if (v === 1 || v === 2) l.q[q.id] = v; }
-    l.beer = Number.isFinite(x.beer) ? x.beer : 0; return c;
+    l.beer = Number.isFinite(x.beer) ? x.beer : 0;
+    if (Array.isArray(x.ct)) for (const q of x.ct.slice(0, 3)) if (q && CK.some((k) => k.k === q.k) && Number.isFinite(q.need) && q.need > 0 && Number.isFinite(q.from) && q.from >= 0 && q.rw && Number.isFinite(q.rw.gems) && Number.isFinite(q.rw.gold)) l.ct.push({ k: q.k, need: Math.min(q.need, 1e7), from: q.from, rw: { gems: Math.max(0, Math.min(500, q.rw.gems | 0)), gold: Math.max(0, Math.min(1e15, q.rw.gold)), frag: 0 } });
+    return c;
   };
   Core.ACH.push({ id: 'art1', name: 'Зачарованный', desc: 'Получи первый зачарованный меч', gems: 5, ok: (s) => owned(s).length >= 1 },
     { id: 'art5', name: 'Оружейник', desc: 'Собери 5 зачарованных мечей', gems: 15, ok: (s) => owned(s).length >= 5 },
-    { id: 'art9', name: 'Коллекционер легенд', desc: 'Собери все 9 мечей', gems: 40, ok: (s) => owned(s).length >= 9 },
+    { id: 'art9', name: 'Коллекционер легенд', desc: 'Собери все мечи', gems: 40, ok: (s) => owned(s).length >= ARTS.length },
+    { id: 'elite10', name: 'Охотник на элиту', desc: 'Победи 10 элитных монстров', gems: 8, ok: (s) => s.st.elites >= 10 },
+    { id: 'evt10', name: 'Везунчик', desc: 'Поймай 10 событий', gems: 10, ok: (s) => s.st.events >= 10 },
+    { id: 'gob5', name: 'Гроза гоблинов', desc: 'Поймай 5 гоблинов-воров', gems: 10, ok: (s) => s.st.goblins >= 5 },
+    { id: 'ct10', name: 'Контрактник', desc: 'Выполни 10 контрактов', gems: 15, ok: (s) => s.st.contracts >= 10 },
     { id: 'artmax', name: 'Мастер зачарования', desc: 'Прокачай меч до 10 уровня', gems: 20, ok: (s) => ARTS.some((a) => lvOf(s, a.id) >= MAXL) },
     { id: 'quest5', name: 'Помощник ярла', desc: 'Выполни 5 заданий', gems: 10, ok: (s) => QS.filter((q) => qst(s, q.id) === 2).length >= 5 });
 
+
+  // ---------- контракты (повторяемые) ----------
+  const CK = [
+    { k: 'kills', n: 'Убей монстров', b: 40, sc: 25 }, { k: 'bosses', n: 'Победи боссов', b: 2, sc: 0.6 },
+    { k: 'elites', n: 'Победи элиту', b: 3, sc: 0.8 }, { k: 'clicks', n: 'Сделай кликов', b: 150, sc: 60 },
+    { k: 'skills', n: 'Используй умения', b: 6, sc: 2 }, { k: 'events', n: 'Поймай события', b: 2, sc: 0.5 }];
+  const ctMake = (s, avoid) => {
+    const pool = CK.filter((c) => c.k !== avoid), c = pool[Math.floor(Math.random() * pool.length)], f = Math.floor(s.maxN / 10);
+    const need = Math.round(c.b + c.sc * f * 2), r = Math.random();
+    return { k: c.k, need, from: s.st[c.k] || 0, rw: { gems: 1 + Math.floor(f / 2) + (r < 0.3 ? 1 : 0), gold: Math.round(need * 6 * (1 + f)), frag: 0 } };
+  };
+  function contracts(s) {
+    const l = lore(s); if (!Array.isArray(l.ct)) l.ct = [];
+    while (l.ct.length < 3) l.ct.push(ctMake(s, l.ct.length ? l.ct[l.ct.length - 1].k : null));
+    return l.ct;
+  }
+  const ctCur = (s, c) => Math.max(0, Math.min(c.need, (s.st[c.k] || 0) - c.from));
+  const ctName = (c) => CK.find((x) => x.k === c.k).n;
+  function ctClaim(s, i) {
+    const l = lore(s), c = l.ct && l.ct[i]; if (!c || ctCur(s, c) < c.need) return null;
+    s.gems += c.rw.gems; s.gold += c.rw.gold; s.st.contracts++;
+    const out = { gems: c.rw.gems, gold: c.rw.gold };
+    if (s.st.contracts % 10 === 0) out.art = dropArt(s, 'contract');
+    l.ct[i] = ctMake(s, c.k); return out;
+  }
+
   // экспедиция «Древние руины» иногда находит меч
   const prevClaim = W.expClaim;
-  W.expClaim = function (s, idx) { const x = s.city.exp[idx], r = prevClaim(s, idx); if (r && x && x.k === 'ruins' && Math.random() < 0.12) r.art = dropArt(s); return r; };
+  W.expClaim = function (s, idx) { const x = s.city.exp[idx], r = prevClaim(s, idx); if (r && x && x.k === 'ruins' && Math.random() < 0.12) r.art = dropArt(s, 'boss'); return r; };
 
-  Core.Lore = { ARTS, AID, RARC, MAXL, NPCS, NID, QS, QID, FXN, fxVal, fxStr, procText, artInfo, owned, equipped, lvOf, upCost, colBonus, giveArt, artEquip, artUp, dropArt, reqs, reqCur, rewardOf, rewardLines, npcMode, npcVisible, npcQuest, qst, activeQuests, nextHint, claim, start, NODES, qAllOk };
+  Core.Lore = { ARTS, AID, RARC, MAXL, NPCS, NID, QS, QID, FXN, fxVal, fxStr, procText, artInfo, owned, equipped, lvOf, upCost, colBonus, giveArt, artEquip, artUp, dropArt, reqs, reqCur, rewardOf, rewardLines, npcMode, npcVisible, npcQuest, qst, activeQuests, nextHint, claim, start, NODES, qAllOk, contracts, ctCur, ctName, ctClaim };
   if (typeof module !== 'undefined' && module.exports) module.exports = Core.Lore;
 })(typeof window !== 'undefined' ? window : globalThis);

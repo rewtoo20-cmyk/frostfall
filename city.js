@@ -36,7 +36,7 @@
       if (!Lr.npcVisible(S, n)) continue; const md = Lr.npcMode(S, n.id).mode, f = Math.floor(T * 1.2 + n.x) % 2, by = n.ghost ? Math.round(Math.sin(T * 2) * 2) : 0, spr = A.hum(n.key, f, false), hv = hoverId === 'npc:' + n.id;
       c.fillStyle = 'rgba(20,40,80,.25)'; c.fillRect(n.x - 10, 184, 20, 3);
       if (n.ghost) c.globalAlpha = 0.72; Sc.drawSpr(c, spr, n.x, 186 + by); c.globalAlpha = 1;
-      const top = 186 + by - Math.round(25 * A.HUMANS[n.key].k * 1.3);
+      const top = 186 + by - 31;
       if (md !== 'idle' && md !== 'wait') { const up = Math.round(Math.sin(T * 4 + n.x) * 2), ch = md === 'offer' ? '!' : '?', col = md === 'offer' ? '#ffd24a' : '#5fe08a'; panel(c, n.x - 6, top - 14 + up, 12, 13, { fill: '#162038', hi: col }); text(c, ch, n.x, top - 14 + up, col, { align: 'c', sh: null }); }
       else if (md === 'wait') { const up = Math.round(Math.sin(T * 3 + n.x)); text(c, '...', n.x, top - 10 + up, '#9aa4c0', { align: 'c' }); }
       if (hv) { const t = n.name + ', ' + n.title.toLowerCase(), w = tw(t) + 10; panel(c, Math.max(2, Math.min(WD - w - 2, n.x - w / 2)), top - 30, w, 14); text(c, t, Math.max(2, Math.min(WD - w - 2, n.x - w / 2)) + 5, top - 29, '#fff'); }

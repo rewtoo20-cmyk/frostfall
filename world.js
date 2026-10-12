@@ -3,7 +3,7 @@
   'use strict';
   const Core = root.Core, H = Core.H, F = Core.fmt;
   const RES = { wood: { name: 'Дерево', col: '#d8a860' }, stone: { name: 'Камень', col: '#b8c4d4' }, iron: { name: 'Железо', col: '#8fb0f0' } };
-  const ZONE_RES = ['wood', 'wood', 'stone', 'stone', 'iron', 'iron'];
+  const ZONE_RES = ['wood', 'wood', 'stone', 'stone', 'iron', 'iron', 'stone', 'iron', 'iron'];
   // g0/gg: золото (база и рост на уровень), m: материалы [база, рост]; req: нужный уровень Ратуши
   const BLD = [
     { id: 'hall', name: 'Ратуша', desc: 'Открывает постройки. +4% золота, +2% урона за ур.', g0: 400, gg: 2.1, m: { wood: [25, 1.6], stone: [15, 1.6] }, req: 0, max: 20 },
