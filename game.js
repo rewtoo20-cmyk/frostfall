@@ -16,7 +16,8 @@
   // ---------- масштаб окна ----------
   let SK = 1;
   function fitScreen() {
-    const d = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+    const vv = window.visualViewport, d = window.devicePixelRatio || 1, W = Math.round(vv ? vv.width : innerWidth), H = Math.round(vv ? vv.height : innerHeight);
+    document.documentElement.style.height = H + 'px'; document.body.style.height = H + 'px'; document.body.style.width = W + 'px'; window.scrollTo(0, 0); if (H > W * 1.1 && !window.__rot) { window.__rot = true; setTimeout(() => toast('Поверни телефон горизонтально', '#ffd24a'), 800); } else if (W >= H) window.__rot = false;
     const f = Math.min(W / WD, H / HT);             // css-масштаб: занимаем максимум окна
     const k = Math.max(1, Math.ceil(f * d - 1e-6)); // внутренний буфер не меньше экрана -> чёткий текст
     if (k !== SK || cv.width !== WD * k) { SK = k; cv.width = WD * k; cv.height = HT * k; }
@@ -27,7 +28,9 @@
   let lowWarn = false; addEventListener('resize', () => { if (!lowWarn && (innerWidth < 512 || innerHeight < 288)) { lowWarn = true; toast('Окно слишком маленькое: интерфейс может быть мелким', '#ffd24a'); } });
   addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
   addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0', '_'].includes(e.key)) e.preventDefault(); });
-  addEventListener('resize', fitScreen);
+  addEventListener('resize', fitScreen); addEventListener('orientationchange', () => { fitScreen(); setTimeout(fitScreen, 300); setTimeout(fitScreen, 900); });
+  if (window.visualViewport) { window.visualViewport.addEventListener('resize', fitScreen); window.visualViewport.addEventListener('scroll', () => window.scrollTo(0, 0)); }
+  setTimeout(fitScreen, 400);
 
   // ---------- кнопки (мгновенный режим) ----------
   function hit(x, y, w, h, fn, o) {
