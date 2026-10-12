@@ -311,7 +311,7 @@
   }
 
   function start() {
-    fitScreen(); S = loadSave() || C.newState(); C.ensureRt(S); Sc.init(); Sc.setLight(S.set.light);
+    fitScreen(); S = loadSave() || C.newState(); C.ensureRt(S); try { if (/[?&]light=1/.test(location.search)) S.set.light = true; } catch (e) {} Sc.init(); Sc.setLight(S.set.light);
     const off = C.offlineGain(S, (Date.now() - S.seen) / 1000);
     if (off) dialog = { title: 'С возвращением!', lines: ['Пока тебя не было (' + C.fmtTime(off.secs) + '), отряд победил ' + F(off.kills) + ' монстров.', 'Добыча: ' + F(off.gold) + ' золота' + (off.res ? ', ' + F(off.res.wood) + ' дерева, ' + F(off.res.stone) + ' камня, ' + F(off.res.iron) + ' железа' : '') + '.'], buttons: [{ t: 'Забрать', ok: 1, fn: () => { C.applyOffline(S, off); } }] };
     else if (!S.st.clicks) toast('Клик или пробел: удар', '#5bc0ff');
