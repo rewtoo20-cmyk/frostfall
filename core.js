@@ -50,7 +50,7 @@
   const HPG = 1.5, GOLD_RATIO = 0.08, KILLS_PER_STAGE = 5, BOSS_TIME = 30;
   const BAG_MAX = 24, OFFLINE_BASE_H = 4;
 
-  const H = { dmg: () => 1, gold: () => 1, dps: () => 0, crit: () => 0, boss: () => 0, cd: () => 1, storm: () => 1, shard: () => 1, gear: () => 1, click: () => 1, ally: () => 1, tick: () => {}, kill: () => {}, newCity: () => null, loadCity: () => null, offline: () => {} };
+  const H = { dmg: () => 1, gold: () => 1, dps: () => 0, crit: () => 0, boss: () => 0, cd: () => 1, storm: () => 1, shard: () => 1, gear: () => 1, click: () => 1, ally: () => 1, tick: () => {}, kill: () => {}, strike: () => null, newCity: () => null, loadCity: () => null, offline: () => {} };
   const ACH = [
     { id: 'k100', name: 'Охотник', desc: 'Победи 100 монстров', gems: 2, ok: (s) => s.st.kills >= 100 },
     { id: 'k2000', name: 'Истребитель', desc: 'Победи 2 000 монстров', gems: 6, ok: (s) => s.st.kills >= 2000 },
@@ -67,7 +67,7 @@
 
   // ---------- числа ----------
   function fmt(n) {
-    if (!Number.isFinite(n)) return '∞';
+    if (!Number.isFinite(n)) return 'много';
     if (n < 1000) return n < 10 && n % 1 ? n.toFixed(1).replace('.', ',') : String(Math.floor(n));
     const U = ['', 'К', 'М', 'Б', 'Т', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
     const e = Math.min(U.length - 1, Math.floor(Math.log10(n) / 3));
@@ -172,9 +172,10 @@
   function hit(s, auto) {
     const rt = ensureRt(s); if (!rt.mon || rt.mon.dead) return 0;
     const crit = Math.random() < critChance(s);
-    const d = clickDmg(s) * (crit ? critMult(s) : 1);
+    let d = clickDmg(s) * (crit ? critMult(s) : 1);
+    const pr = H.strike(s, crit, !!auto); if (pr) d *= pr.m;
     if (!auto) s.st.clicks++;
-    dealDamage(s, d, { crit, auto: !!auto });
+    dealDamage(s, d, { crit, auto: !!auto, proc: pr || undefined });
     return d;
   }
   function kill(s) {

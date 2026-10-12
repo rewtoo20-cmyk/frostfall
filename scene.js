@@ -66,10 +66,12 @@
   const num = W.Core.fmt;
   function addFloat(x, y, t, col, vy) { if (floats.length < (light ? 8 : 18)) floats.push({ x, y, t, col, vy: vy || -26, life: 1 }); }
   function burst(x, y, n, col, sp) { if (light) n = Math.ceil(n / 3); for (let i = 0; i < n && parts.length < 80; i++) { const a = rr(0, PI2), v = rr(15, sp || 70); parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: rr(0.4, 0.9), col, s: Math.random() > 0.6 ? 2 : 1 }); } }
+  let procFx = null;
   function fx(e, S) {
     const m = S.rt.mon, boss = m && m.boss, my = FEET - (boss ? 40 : 18);
     if (e.t === 'dmg' && !e.quiet) {
       if (e.skill) { addFloat(MX + rr(-8, 8), my - 20, num(e.v), '#7fe0ff', -30); fxStorm = 0.7; shake = 3; }
+      else if (e.proc) { heroAtk = 0.2; procFx = { t: 0.35, col: e.proc.col, id: e.proc.id }; addFloat(MX, my - 34, e.proc.name, e.proc.col, -22); addFloat(MX + rr(-14, 14), my - 6, num(e.v) + '!', '#ffffff', -34); burst(MX, my + 4, 16, e.proc.col, 110); shake = 4; }
       else { heroAtk = 0.14; addFloat(MX + rr(-22, 22), my - rr(0, 16), num(e.v) + (e.crit ? '!' : ''), e.crit ? '#ffd24a' : '#ffffff'); burst(MX + rr(-8, 8), my + 6, e.crit ? 7 : 3, e.crit ? '#ffd24a' : '#e8f4ff', 60); if (e.crit) shake = 2; }
     } else if (e.t === 'gold') { for (let i = 0; i < (light ? 2 : 6); i++) parts.push({ x: MX + rr(-6, 6), y: my + 10, vx: rr(-40, 40), vy: rr(-110, -50), life: 1.2, col: '#ffd24a', s: 2, g: 260, coin: 1 }); }
     else if (e.t === 'level') { addFloat(HX, FEET - 56, 'Уровень ' + e.v + '!', '#7dffb0', -20); burst(HX, FEET - 22, 20, '#7dffb0', 90); }
@@ -79,6 +81,12 @@
   }
 
   // ---------- кадр ----------
+  // искры вокруг зачарованного клинка
+  function bladeFx(c, ar, x, y0, y1) {
+    const n = light ? 1 : ar.rar >= 3 ? 4 : ar.rar === 2 ? 3 : 2;
+    for (let i = 0; i < n; i++) { const ph = (T * (0.9 + i * 0.31) + i * 1.7) % 1, yy = y1 - ph * (y1 - y0 + 8), xx = x + Math.sin(T * 3 + i * 2) * 4 + (i % 2 ? 3 : -3); c.globalAlpha = Math.max(0, 1 - ph); c.fillStyle = i % 2 ? ar.pal[0] : ar.pal[1]; c.fillRect(Math.round(xx), Math.round(yy), 1 + (i % 2), 1 + (i % 2)); }
+    c.globalAlpha = 1;
+  }
   function drawSpr(c, s, x, y, o) { // якорь: низ по центру
     o = o || {}; c.globalAlpha = o.a == null ? 1 : o.a; c.drawImage(s, Math.round(x - s.width / 2), Math.round(y - s.height + 1)); c.globalAlpha = 1;
   }
@@ -115,7 +123,7 @@
       draws.push({ y, f: () => drawSpr(c, A.hum(i, f, atk), x, y + bob) });
     });
     (S.city ? S.city.squad : []).forEach((id, i) => { const x = 62 + i * 22, y = FEET + 10 + (i % 2) * 8, f = running ? Math.floor(T * 7 + i) % 2 : 0, atk = Math.floor(T * 1.9 + i * 0.5) % 2 === 1 && !!(m && !m.dead); draws.push({ y, f: () => drawSpr(c, A.hum(id, f, atk), x, y) }); });
-    { const f = running ? Math.floor(T * 9) % 2 : 0, atk = heroAtk > 0; draws.push({ y: FEET, f: () => { c.fillStyle = 'rgba(20,40,80,.25)'; c.fillRect(HX - 14, FEET - 1, 28, 3); if (S.buff.cry > 0) { c.fillStyle = 'rgba(255,156,42,.35)'; c.fillRect(HX - 14, FEET - 52, 28, 52); } drawSpr(c, A.hum('hero', f, atk), HX, FEET + (running && f ? -1 : 0)); } }); }
+    { const f = running ? Math.floor(T * 9) % 2 : 0, atk = heroAtk > 0; draws.push({ y: FEET, f: () => { c.fillStyle = 'rgba(20,40,80,.25)'; c.fillRect(HX - 14, FEET - 1, 28, 3); if (S.buff.cry > 0) { c.fillStyle = 'rgba(255,156,42,.35)'; c.fillRect(HX - 14, FEET - 52, 28, 52); } const Lr = W.Core.Lore, eq = Lr && Lr.equipped(S); drawSpr(c, A.hum('hero', f, atk, eq ? eq.id : ''), HX, FEET + (running && f ? -1 : 0)); if (eq && !atk) bladeFx(c, eq, HX + 3, FEET - 44, FEET - 26); } }); }
     draws.sort((a, b) => a.y - b.y).forEach((d) => d.f());
 
     // монстр
@@ -133,11 +141,17 @@
         if (boss) { text(c, Math.ceil(rt.bossT) + ' с', bx + bw + 6, by - 2, rt.bossT < 8 ? '#ff6b6b' : '#ffffff'); c.drawImage(A.icons.crown, MX - 4, by - 22); }
       }
     }
+    if (procFx && procFx.t > 0) { procFx.t -= dt; const k = Math.max(0, procFx.t / 0.35), ar = W.Core.Lore && W.Core.Lore.AID[procFx.id], bolt = procFx.id === 'thunder' || procFx.id === 'eye' || procFx.id === 'heart', by = FEET - (m && m.boss ? 40 : 18);
+      c.globalAlpha = Math.min(1, k * 1.6); c.fillStyle = procFx.col;
+      if (bolt) { let x = MX + 6, y = 0; while (y < by) { const nx = MX + rr(-9, 9), ny = Math.min(by, y + rr(10, 20)); const steps = Math.ceil(Math.abs(ny - y)); for (let q = 0; q < steps; q++) c.fillRect(Math.round(x + (nx - x) * q / steps), Math.round(y + q), 2, 1); x = nx; y = ny; } c.fillStyle = '#ffffff'; c.fillRect(MX - 1, by - 3, 3, 3); }
+      else { const r = Math.round((1 - k) * 30) + 4; c.fillRect(MX - r, by - 1, r * 2, 2); c.fillRect(MX - 1, by - r, 2, r * 2); c.fillRect(MX - Math.round(r * 0.7), by - Math.round(r * 0.7), 2, 2); c.fillRect(MX + Math.round(r * 0.7), by - Math.round(r * 0.7), 2, 2); c.fillRect(MX - Math.round(r * 0.7), by + Math.round(r * 0.7), 2, 2); c.fillRect(MX + Math.round(r * 0.7), by + Math.round(r * 0.7), 2, 2); }
+      c.globalAlpha = 1; }
     if (fxStorm > 0) { c.fillStyle = '#9fe8ff'; for (let k = 0; k < 16; k++) { const x = MX - 40 + k * 5 + Math.round(Math.sin(k * 3 + T * 30) * 3), y = ((1 - fxStorm / 0.7) * 260 + k * 22) % 150; c.fillRect(x, y, 2, 6); } }
     // частицы и числа
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; } p.vy += (p.g || 160) * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.coin && p.y > FEET + 2) { p.y = FEET + 2; p.vy *= -0.4; p.vx *= 0.6; } c.fillStyle = p.col; c.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s); }
     for (let i = floats.length - 1; i >= 0; i--) { const f = floats[i]; f.life -= dt * 0.9; if (f.life <= 0) { floats.splice(i, 1); continue; } f.y += f.vy * dt; c.globalAlpha = Math.min(1, f.life * 2); text(c, f.t, f.x, f.y, f.col, { align: 'c' }); }
     c.globalAlpha = 1;
+    if (procFx && procFx.t > 0) { c.globalAlpha = Math.min(0.22, procFx.t * 0.6); c.fillStyle = procFx.col; c.fillRect(0, 0, WD, HT); c.globalAlpha = 1; }
     if (flash > 0) { c.fillStyle = 'rgba(255,40,40,' + (flash * 0.4).toFixed(2) + ')'; c.fillRect(0, 0, WD, HT); }
     c.restore();
   }

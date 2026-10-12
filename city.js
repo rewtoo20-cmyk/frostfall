@@ -6,6 +6,7 @@
     { id: 'mage', x: 38, y: 126 }, { id: 'walls', x: 108, y: 126 }, { id: 'hall', x: 192, y: 128 }, { id: 'walls', x: 276, y: 126, flip: true }, { id: 'temple', x: 346, y: 126 },
     { id: 'sawmill', x: 34, y: 172 }, { id: 'quarry', x: 96, y: 172 }, { id: 'tavern', x: 158, y: 172 }, { id: 'mine', x: 220, y: 172 }, { id: 'forge', x: 282, y: 172 }, { id: 'treasury', x: 344, y: 172 },
   ];
+  const WD = 384;
   let T = 0, smoke = [], walkers = {};
   const tier = (L) => (L >= 15 ? 3 : L >= 10 ? 2 : L >= 5 ? 1 : 0);
   function frame(c, S, dt, hoverId) {
@@ -28,7 +29,18 @@
     };
     SPOTS.filter((sp) => sp.y < 150).forEach(drawSpot);
     SPOTS.filter((sp) => sp.y >= 150).forEach(drawSpot);
-    S.city.squad.forEach((id, i) => { const base = [65, 127, 189, 251][i] || 313, x = base + Math.sin(T * 0.7 + i * 2) * 12, f = Math.floor(T * 5 + i) % 2; Sc.drawSpr(c, A.hum(id, f, false), x, 187); });
+    // жители столицы
+    const Lr = W.Core.Lore;
+    if (Lr) for (const n of Lr.NPCS) {
+      if (!Lr.npcVisible(S, n)) continue; const md = Lr.npcMode(S, n.id).mode, f = Math.floor(T * 1.2 + n.x) % 2, by = n.ghost ? Math.round(Math.sin(T * 2) * 2) : 0, spr = A.hum(n.key, f, false), hv = hoverId === 'npc:' + n.id;
+      c.fillStyle = 'rgba(20,40,80,.25)'; c.fillRect(n.x - 10, 184, 20, 3);
+      if (n.ghost) c.globalAlpha = 0.72; Sc.drawSpr(c, spr, n.x, 186 + by); c.globalAlpha = 1;
+      const top = 186 + by - spr.height;
+      if (md !== 'idle' && md !== 'wait') { const up = Math.round(Math.sin(T * 4 + n.x) * 2), ch = md === 'offer' ? '!' : '?', col = md === 'offer' ? '#ffd24a' : '#5fe08a'; panel(c, n.x - 6, top - 14 + up, 12, 13, { fill: '#162038', hi: col }); text(c, ch, n.x, top - 14 + up, col, { align: 'c', sh: null }); }
+      else if (md === 'wait') { const up = Math.round(Math.sin(T * 3 + n.x)); text(c, '...', n.x, top - 10 + up, '#9aa4c0', { align: 'c' }); }
+      if (hv) { const t = n.name + ', ' + n.title.toLowerCase(), w = tw(t) + 10; panel(c, Math.max(2, Math.min(WD - w - 2, n.x - w / 2)), top - 30, w, 14); text(c, t, Math.max(2, Math.min(WD - w - 2, n.x - w / 2)) + 5, top - 29, '#fff'); }
+      spots.push({ id: 'npc:' + n.id, npc: n.id, x: n.x - 13, y: top, w: 26, h: spr.height + 2 });
+    }
     for (let i = smoke.length - 1; i >= 0; i--) { const p = smoke[i]; p.l -= dt; if (p.l <= 0) { smoke.splice(i, 1); continue; } p.y -= 9 * dt; p.x += Math.sin(T * 2 + p.y) * 4 * dt; c.globalAlpha = Math.min(0.7, p.l * 0.6); c.fillStyle = '#dfe9f5'; c.fillRect(Math.round(p.x), Math.round(p.y), 3, 3); }
     c.globalAlpha = 1;
     Sc.snowfall(c, dt);

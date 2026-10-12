@@ -16,13 +16,23 @@
     if (o.shield) { a.R(0, 13, 5, 8, o.shield); a.R(1, 14, 3, 6, '#dfe9f5'); a.R(2, 16, 1, 2, o.shield); }
     a.R(3, 13, 2, 6, o.bodyD || o.body);
     a.R(5, 5, 7, 7, SK); a.P(9, 8, K); a.P(11, 8, K);
+    if (o.beard) { a.R(5, 9, 7, 4, o.beard); a.P(9, 8, K); a.P(11, 8, K); }
     if (o.helm) { a.R(4, 3, 9, 4, o.helm); a.R(4, 3, 3, 9, o.helm); a.R(11, 5, 2, 1, o.helm); if (o.crest) { a.R(7, 1, 4, 2, o.crest); } }
     else if (o.hat === 'cone') { a.R(4, 4, 9, 2, o.hair); a.T(8.5, -2, 3, 5, 14, 5, o.hatc); a.R(3, 4, 11, 2, o.hatc); }
     else if (o.hat === 'fur') { a.R(4, 3, 9, 4, '#f4f4f4'); a.R(3, 4, 3, 6, '#f4f4f4'); a.R(5, 3, 2, 1, '#cfdcea'); a.R(10, 5, 3, 1, '#b8cde4'); }
     else { a.R(4, 4, 9, 3, o.hair); a.R(4, 6, 2, 4, o.hair); if (o.hood) a.R(3, 3, 11, 2, o.hair); }
     a.R(11, 13, 2, 5, o.body); a.P(12, 18, SK); a.P(13, 18, SK);
     const w = o.weapon;
-    if (w === 'sword') { if (atk) { a.L(13, 18, 25, 22, '#dfe9f5', 2); a.R(12, 17, 2, 3, '#ffd24a'); } else { a.R(14, 7, 2, 11, '#dfe9f5'); a.R(14, 7, 1, 11, '#ffffff'); a.R(12, 17, 6, 1, '#ffd24a'); a.R(14, 18, 2, 2, '#8a5a3a'); } }
+    if (w === 'sword' && o.art) {
+      const ar = o.art, pl = ar.pal, lt = pl[0], mn = pl[1], ac = pl[2];
+      if (atk) { a.L(13, 18, 26, 20, mn, 3); a.L(13, 17, 26, 19, lt, 1); a.R(12, 17, 2, 4, '#ffd24a'); a.P(25, 20, ac); }
+      else {
+        if (ar.shape === 'zig') { for (let yy = 0; yy < 17; yy++) { const off = (yy % 6 < 3) ? 0 : 1; a.R(14 + off, yy + 1, 2, 1, mn); a.P(14 + off, yy + 1, lt); } a.R(14, 0, 2, 1, lt); }
+        else if (ar.shape === 'wide') { a.R(13, 4, 4, 13, mn); a.R(14, 4, 1, 13, lt); a.R(14, 1, 2, 3, mn); a.P(14, 1, lt); a.P(14, 12, ac); a.P(15, 8, ac); }
+        else { a.R(14, 2, 2, 15, mn); a.R(14, 2, 1, 15, lt); a.R(14, 0, 2, 2, lt); a.P(15, 10, ac); }
+        a.R(11, 17, 8, 1, '#ffd24a'); a.P(14, 17, ac); a.P(15, 17, ac); a.R(14, 18, 2, 3, '#6a4a30'); a.P(14, 21, ac);
+      }
+    } else if (w === 'sword') { if (atk) { a.L(13, 18, 25, 22, '#dfe9f5', 2); a.R(12, 17, 2, 3, '#ffd24a'); } else { a.R(14, 7, 2, 11, '#dfe9f5'); a.R(14, 7, 1, 11, '#ffffff'); a.R(12, 17, 6, 1, '#ffd24a'); a.R(14, 18, 2, 2, '#8a5a3a'); } }
     else if (w === 'bow') { a.E(15, 16, 3, 8, '#8a5a3a'); a.E(14, 16, 3, 7, null); a.L(13, 8, 13, 24, '#e8e8e8'); a.L(15, 16, atk ? 9 : 16, 16, '#c8a05a'); }
     else if (w === 'axe') { if (atk) { a.L(13, 18, 22, 21, '#8a5a3a', 1); a.R(20, 18, 5, 6, '#cfd8e3'); } else { a.L(13, 20, 14, 8, '#8a5a3a', 1); a.R(13, 6, 6, 5, '#cfd8e3'); a.R(18, 7, 1, 3, '#9aa4b2'); } }
     else if (w === 'staff') { a.R(14, 7, 1, 19, '#8a5a3a'); a.E(14.5, 5.5, 2.6, 2.6, atk ? '#ffffff' : '#7fe0ff'); a.P(14, 5, '#ffffff'); }
@@ -41,6 +51,14 @@
     6: { body: '#7a4ab8', trim: '#ff7ae0', hair: '#e8e8ff', hat: 'cone', hatc: '#5a2a98', weapon: 'orb', cape: '#3a1a68', k: 1.1 },
   };
 
+  Object.assign(HUMANS, {
+    n_gunnar: { body: '#6a4a30', trim: '#ffd24a', helm: '#9aa4b2', beard: '#e8e8ee', cape: '#8a2a2a', k: 1.15 },
+    n_einar: { body: '#c8a040', trim: '#ffffff', hair: '#e8c860', k: 1.0 },
+    n_bjorn: { body: '#7a4a2a', trim: '#b0b0b0', hair: '#c8602a', beard: '#c8602a', weapon: 'hammer', k: 1.2 },
+    n_ulf: { body: '#3a7a4a', trim: '#e8d27a', hair: '#4a3020', hood: 1, cape: '#2a5a38', k: 1.0 },
+    n_ing: { body: '#7a5aa8', trim: '#e0d0ff', hair: '#e0e0e8', hood: 1, weapon: 'staff', cape: '#4a3a78', k: 1.0 },
+    n_shade: { body: '#8ab8d8', trim: '#ffffff', helm: '#b8d8f0', crest: '#7fe0ff', cape: '#5a88b8', k: 1.2 },
+  });
   Object.assign(HUMANS, {
     eirik: { body: '#4a6ab0', trim: '#dfe9f5', helm: '#9aa4b2', crest: '#d8453f', weapon: 'sword', shield: '#8a5a3a', k: 1.1 },
     lira: { body: '#2f8a5a', trim: '#a0e0b0', hair: '#e8c860', weapon: 'bow', k: 1 },
@@ -115,9 +133,10 @@
   // ---------- сборка и кэш ----------
   const cache = {}, HS = 1.3;
   function build(key, w, h, k, fn, o) { const a = Art(w, h, k); fn(a); return finish(a, o); }
-  function hum(key, f, atk) {
-    const ck = 'h' + key + f + (atk ? 1 : 0); if (cache[ck]) return cache[ck];
-    const o = HUMANS[key], k = o.k * HS; return (cache[ck] = build(ck, Math.ceil(26 * k), Math.ceil(28 * k), k, (a) => human(a, o, f, atk)));
+  function hum(key, f, atk, art) {
+    const ck = 'h' + key + f + (atk ? 1 : 0) + (art || ''); if (cache[ck]) return cache[ck];
+    let o = HUMANS[key]; const k = o.k * HS; if (art && W.Core.Lore && W.Core.Lore.AID[art]) o = Object.assign({}, o, { art: W.Core.Lore.AID[art] });
+    return (cache[ck] = build(ck, Math.ceil(26 * k), Math.ceil(28 * k), k, (a) => human(a, o, f, atk)));
   }
   function mon(type, f, boss, dragonCol) {
     const ck = 'm' + type + f + (boss ? 'B' : '') + (dragonCol ? 'D' : ''); if (cache[ck]) return cache[ck];
@@ -153,6 +172,8 @@
     mug: ['........', 'KKKKKK..', 'KWWWWKKK', 'KYYYYK.K', 'KYYYYK.K', 'KYYYYKKK', '.KYYYK..', '..KKK...'],
     up: ['...KK...', '..KQQK..', '.KQQQQK.', 'KQQQQQQK', '..KQQK..', '..KQQK..', '..KQQK..', '..KKKK..'],
     star1: ['...KK...', '..KYYK..', 'KKKYYKKK', 'KYYYYYYK', '.KYYYYK.', '.KYYYYK.', '.KYKKYK.', '..K..K..'],
+    blade: ['......KK', '.....KCK', '....KCK.', '...KCK..', 'K.KCK...', '.KYK....', '.KTYK...', 'KT.KK...'],
+    scroll: ['.KKKKKK.', 'KLLLLLLK', 'KLKKKKLK', 'KLLLLLLK', 'KLKKKLLK', 'KLLLLLLK', 'KLKKLLLK', '.KKKKKK.'],
     bolt: ['....KK..', '...KYK..', '..KYK...', '.KYYYK..', '...KYK..', '..KYK...', '.KK.....', '........'],
     lock: ['..KKKK..', '.K....K.', '.K....K.', 'KKKKKKKK', 'KGGGGGGK', 'KGGKKGGK', 'KGGGGGGK', 'KKKKKKKK'],
     arrowU: ['...KK...', '..KLLK..', '.KLLLLK.', 'KKKLLKKK', '...KK...'],

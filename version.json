@@ -1,5 +1,21 @@
 {
-  "version": "1.0.0",
-  "files": ["index.html", "font.js", "core.js", "world.js", "pixel.js", "art.js", "scene.js", "city.js", "game.js"],
-  "notes": ["Столица: 10 построек", "10 героев, отряд и вылазки", "Пиксельная графика"]
+  "version": "1.1.0",
+  "files": [
+    "index.html",
+    "font.js",
+    "core.js",
+    "world.js",
+    "lore.js",
+    "pixel.js",
+    "art.js",
+    "scene.js",
+    "city.js",
+    "game.js"
+  ],
+  "notes": [
+    "9 зачарованных мечей",
+    "Жители и задания",
+    "Новый интерфейс",
+    "Чёткий шрифт"
+  ]
 }
