@@ -50,6 +50,16 @@
       if (r.ok) { this.id = r.id; this.token = r.token; this.nick = r.nick; this._save(); }
       return r;
     }
+    // Перенос аккаунта на другое устройство: код = id + токен (хранить как пароль!)
+    exportKey() { if (!this.registered) return null; try { return btoa(unescape(encodeURIComponent(JSON.stringify({ i: this.id, t: this.token, n: this.nick })))); } catch (e) { return null; } }
+    async importKey(code) {
+      let o; try { o = JSON.parse(decodeURIComponent(escape(atob(String(code).trim())))); } catch (e) { return { ok: false, error: 'Код не подошёл' }; }
+      if (!o || !/^[0-9a-f-]{36}$/.test(o.i || '') || !o.t || !o.n) return { ok: false, error: 'Код не подошёл' };
+      const old = { id: this.id, token: this.token, nick: this.nick }; this.id = o.i; this.token = o.t; this.nick = o.n;
+      const r = await this.req('GET', '/api/save?slot=0', null, { nothrottle: true });
+      if (!r.ok) { this.id = old.id; this.token = old.token; this.nick = old.nick; return { ok: false, error: r.offline ? 'Нет связи с сервером' : 'Код недействителен' }; }
+      this.cloudTs = {}; this.sent = {}; this._save(); return { ok: true, nick: this.nick };
+    }
     logout() { this.id = this.token = this.nick = null; this.cloudTs = {}; this.sent = {}; this._save(); }
     // ---- рейтинг: шлём только если значение выросло; при офлайне складываем в очередь
     async submit(board, value) {
